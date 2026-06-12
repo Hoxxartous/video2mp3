@@ -2,227 +2,442 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Video2MP3 Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#050510;--card:#0e0e20;--card2:#141430;--accent:#6d28d9;--accent2:#8b5cf6;--accent3:#c4b5fd;--green:#10b981;--red:#f43f5e;--text:#f0f0ff;--text2:#9090b0;--text3:#505070;--border:#1a1a35;--r:16px}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:0.5}
-.orb1{width:500px;height:500px;background:radial-gradient(circle,rgba(109,40,217,0.25),transparent 70%);top:-150px;left:-100px;animation:float 8s ease-in-out infinite}
-.orb2{width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,0.12),transparent 70%);bottom:-100px;right:-80px;animation:float 10s ease-in-out infinite reverse}
-@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-30px)}}
+body{font-family:'Inter',sans-serif;background:#050510;color:#f0f0ff;min-height:100vh;overflow-x:hidden}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;opacity:.4}
+.a{width:500px;height:500px;background:radial-gradient(circle,rgba(109,40,217,.25),transparent 70%);top:-150px;left:-100px;animation:fl 8s ease-in-out infinite}
+.b{width:400px;height:400px;background:radial-gradient(circle,rgba(34,211,238,.12),transparent 70%);bottom:-100px;right:-80px;animation:fl 10s ease-in-out infinite reverse}
+@keyframes fl{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-30px)}}
 .wrap{max-width:540px;margin:0 auto;padding:16px;position:relative;z-index:1}
-.header{text-align:center;padding:40px 0 30px}
-.logo{width:72px;height:72px;background:linear-gradient(135deg,#6d28d9,#8b5cf6);border-radius:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 40px rgba(109,40,217,0.35);animation:logoFloat 4s ease-in-out infinite}
-@keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-.logo svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2}
-h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#fff,var(--accent3),#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.subtitle{color:var(--text2);font-size:0.88rem;margin-top:6px}
-.badges{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:16px}
-.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);font-size:0.68rem;color:var(--text2)}
-.badge.hf{background:linear-gradient(135deg,#ff7b00,#ff9d00);color:#000;font-weight:700;border:none}
-.tabs{display:flex;background:var(--card);border-radius:14px;padding:4px;margin-bottom:18px;border:1px solid var(--border);gap:4px}
-.tab{flex:1;padding:12px 6px;text-align:center;border:none;border-radius:10px;background:transparent;color:var(--text3);font-weight:600;font-size:0.78rem;cursor:pointer;transition:all 0.3s}
-.tab.active{background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;box-shadow:0 4px 20px rgba(109,40,217,0.35)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:14px}
-.upload-zone{border:2px dashed var(--border);border-radius:var(--r);padding:40px 16px;text-align:center;cursor:pointer;transition:all 0.3s}
-.upload-zone:hover{border-color:var(--accent2);background:rgba(109,40,217,0.04)}
-.upload-icon{width:64px;height:64px;margin:0 auto 14px;background:linear-gradient(135deg,rgba(109,40,217,0.15),rgba(139,92,246,0.08));border-radius:20px;display:flex;align-items:center;justify-content:center}
-.upload-icon svg{width:28px;height:28px;stroke:var(--accent2);fill:none;stroke-width:1.8}
-.upload-zone h3{font-size:1rem;font-weight:700;margin-bottom:6px}
-.upload-zone p{color:var(--text3);font-size:0.75rem}
-.upload-zone input{display:none}
-.file-info{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card2);border-radius:12px;margin-top:14px;animation:slideUp 0.3s}
-@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.file-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#9333ea);display:flex;align-items:center;justify-content:center}
-.file-icon svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2}
-.file-details{flex:1;min-width:0}
-.file-name{font-weight:700;font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.file-size{font-size:0.7rem;color:var(--text3);margin-top:2px}
-.file-remove{background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.15);color:var(--red);cursor:pointer;padding:8px;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
-.section-label{font-size:0.7rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-.section-label .dot{width:4px;height:4px;border-radius:50%;background:var(--accent2)}
-.format-section{margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
-.format-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.format-chip{padding:10px 6px;text-align:center;border-radius:10px;font-size:0.75rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--text3);transition:all 0.25s}
-.format-chip.active{background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;border-color:var(--accent);box-shadow:0 4px 16px rgba(109,40,217,0.35)}
-.format-chip:hover:not(.active){border-color:var(--accent2);color:var(--text)}
-.format-chip .fmt-sub{font-size:0.58rem;opacity:0.7;display:block;margin-top:2px}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
-.setting{display:flex;flex-direction:column;gap:5px}
-.setting select{padding:11px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:0.8rem;cursor:pointer;outline:none;-webkit-appearance:none}
-.setting select:focus{border-color:var(--accent2)}
-.quality-display{margin-top:14px;padding:12px 16px;background:linear-gradient(135deg,rgba(109,40,217,0.06),rgba(34,211,238,0.04));border:1px solid rgba(109,40,217,0.12);border-radius:12px;display:flex;align-items:center;gap:10px}
-.quality-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#9333ea);display:flex;align-items:center;justify-content:center;font-size:1rem}
-.quality-text{font-size:0.75rem;color:var(--text2);line-height:1.4}
-.quality-text strong{color:var(--accent3)}
-.url-wrap{position:relative}
-.url-input{width:100%;padding:15px 16px 15px 44px;background:var(--card2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:0.9rem;outline:none}
-.url-input:focus{border-color:var(--accent2)}
-.url-input::placeholder{color:var(--text3)}
-.url-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;stroke:var(--text3);fill:none;stroke-width:2}
-.url-hint{font-size:0.68rem;color:var(--text3);margin-top:8px}
-.url-hint span{color:var(--accent3)}
-.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:0.92rem;font-weight:700;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
-.btn-primary{background:linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6);color:#fff;box-shadow:0 4px 20px rgba(109,40,217,0.35)}
-.btn-primary:hover{transform:translateY(-2px)}
-.btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none!important}
-.btn-green{background:linear-gradient(135deg,#059669,var(--green),#34d399);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,0.3)}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2);font-size:0.8rem;padding:10px}
-.progress-card{animation:slideUp 0.4s}
-.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.progress-label{font-size:0.82rem;font-weight:600;display:flex;align-items:center;gap:8px}
-.progress-pct{font-size:0.9rem;color:var(--accent3);font-weight:800}
-.progress-track{background:var(--card2);border-radius:10px;height:8px;overflow:hidden;border:1px solid var(--border)}
-.progress-bar{height:100%;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent2),#22d3ee);background-size:200% 100%;animation:gradient 2s linear infinite;transition:width 0.5s}
-@keyframes gradient{0%{background-position:0% 0%}100%{background-position:200% 0%}}
-.progress-steps{display:flex;gap:4px;margin-top:12px}
-.progress-step{flex:1;height:3px;border-radius:2px;background:var(--card2)}
-.progress-step.done{background:var(--green)}
-.progress-step.active{background:var(--accent2);animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:0.5}50%{opacity:1}}
-.status{padding:14px 16px;border-radius:14px;font-size:0.85rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-top:14px;animation:slideUp 0.3s}
-.status.success{background:rgba(16,185,129,0.06);color:#34d399;border:1px solid rgba(16,185,129,0.15)}
-.status.error{background:rgba(244,63,94,0.06);color:var(--red);border:1px solid rgba(244,63,94,0.15)}
-.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.12);border-top-color:#fff;border-radius:50%;animation:spin 0.65s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.history-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.history-title{font-weight:800;font-size:0.95rem}
-.history-count{background:var(--accent);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px}
-.history-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card2);border-radius:12px;margin-bottom:8px;border:1px solid var(--border)}
-.h-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;background:linear-gradient(135deg,rgba(16,185,129,0.15),rgba(52,211,153,0.08))}
-.h-info{flex:1;min-width:0}
-.h-name{font-size:0.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.h-size{font-size:0.65rem;color:var(--text3);margin-top:2px}
-.h-actions{display:flex;gap:6px}
-.h-btn{padding:8px 12px;border:none;border-radius:8px;font-size:0.72rem;cursor:pointer;font-weight:700}
-.h-btn.dl{background:rgba(16,185,129,0.08);color:var(--green);border:1px solid rgba(16,185,129,0.12)}
-.h-btn.rm{background:rgba(244,63,94,0.08);color:var(--red);border:1px solid rgba(244,63,94,0.12)}
-.empty-state{text-align:center;padding:36px 20px}
-.empty-icon{font-size:3rem;margin-bottom:12px;opacity:0.5}
-.empty-text{color:var(--text3);font-size:0.85rem}
-.footer{text-align:center;padding:32px 0;color:var(--text3);font-size:0.7rem}
-.hidden{display:none!important}
-.mt-sm{margin-top:8px}
-@media(max-width:400px){.settings-grid{grid-template-columns:1fr}}
+.hd{text-align:center;padding:40px 0 30px}
+.lg{width:72px;height:72px;background:linear-gradient(135deg,#6d28d9,#8b5cf6);border-radius:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 40px rgba(109,40,217,.35);animation:lf 4s ease-in-out infinite}
+@keyframes lf{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.lg svg{width:34px;height:34px;fill:none;stroke:#fff;stroke-width:2}
+h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#fff,#c4b5fd,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{color:#9090b0;font-size:.88rem;margin-top:6px}
+.bdg{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:16px}
+.bdg span{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;background:rgba(255,255,255,.03);border:1px solid #1a1a35;font-size:.68rem;color:#9090b0}
+.bdg .hf{background:linear-gradient(135deg,#ff7b00,#ff9d00);color:#000;font-weight:700;border:none}
+.tbs{display:flex;background:#0e0e20;border-radius:14px;padding:4px;margin-bottom:18px;border:1px solid #1a1a35;gap:4px}
+.tb{flex:1;padding:12px 6px;text-align:center;border:none;border-radius:10px;background:transparent;color:#505070;font-weight:600;font-size:.78rem;cursor:pointer;transition:.3s}
+.tb.on{background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#fff;box-shadow:0 4px 20px rgba(109,40,217,.35)}
+.cd{background:#0e0e20;border:1px solid #1a1a35;border-radius:16px;padding:22px;margin-bottom:14px;position:relative;overflow:hidden}
+.cd::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(139,92,246,.3),transparent)}
+.up{border:2px dashed #252545;border-radius:16px;padding:40px 16px;text-align:center;cursor:pointer;transition:.3s}
+.up:hover{border-color:#8b5cf6;background:rgba(109,40,217,.04)}
+.ui{width:64px;height:64px;margin:0 auto 14px;background:linear-gradient(135deg,rgba(109,40,217,.15),rgba(139,92,246,.08));border-radius:20px;display:flex;align-items:center;justify-content:center}
+.ui svg{width:28px;height:28px;stroke:#8b5cf6;fill:none;stroke-width:1.8}
+.up h3{font-size:1rem;font-weight:700;margin-bottom:6px}
+.up p{color:#505070;font-size:.75rem}
+.up input{display:none}
+.fi{display:flex;align-items:center;gap:12px;padding:14px;background:#141430;border-radius:12px;margin-top:14px}
+.fic{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#6d28d9,#9333ea);display:flex;align-items:center;justify-content:center}
+.fic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2}
+.fid{flex:1;min-width:0}
+.fin{font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fis{font-size:.7rem;color:#505070;margin-top:2px}
+.fr{background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.15);color:#f43f5e;cursor:pointer;padding:8px;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1rem}
+.sl{font-size:.7rem;font-weight:700;color:#9090b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.sl .dt{width:4px;height:4px;border-radius:50%;background:#8b5cf6}
+.fs{margin-top:18px;padding-top:18px;border-top:1px solid #1a1a35}
+.fg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fc{padding:10px 6px;text-align:center;border-radius:10px;font-size:.75rem;font-weight:700;cursor:pointer;border:1px solid #1a1a35;background:#141430;color:#505070;transition:.25s}
+.fc.on{background:linear-gradient(135deg,#6d28d9,#7c3aed);color:#fff;border-color:#6d28d9;box-shadow:0 4px 16px rgba(109,40,217,.35)}
+.fc:hover:not(.on){border-color:#8b5cf6;color:#f0f0ff}
+.fc small{font-size:.58rem;opacity:.7;display:block;margin-top:2px}
+.sg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+.st{display:flex;flex-direction:column;gap:5px}
+.st select{padding:11px 12px;background:#141430;border:1px solid #1a1a35;border-radius:10px;color:#f0f0ff;font-size:.8rem;cursor:pointer;outline:none}
+.st select:focus{border-color:#8b5cf6}
+.qd{margin-top:14px;padding:12px 16px;background:linear-gradient(135deg,rgba(109,40,217,.06),rgba(34,211,238,.04));border:1px solid rgba(109,40,217,.12);border-radius:12px;display:flex;align-items:center;gap:10px}
+.qi{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6d28d9,#9333ea);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.qt{font-size:.75rem;color:#9090b0;line-height:1.4}
+.qt strong{color:#c4b5fd}
+.uw{position:relative}
+.ui2{width:100%;padding:15px 16px 15px 44px;background:#141430;border:1px solid #1a1a35;border-radius:12px;color:#f0f0ff;font-size:.9rem;outline:none}
+.ui2:focus{border-color:#8b5cf6}
+.ui2::placeholder{color:#505070}
+.uic{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;stroke:#505070;fill:none;stroke-width:2}
+.uh{font-size:.68rem;color:#505070;margin-top:8px}
+.uh em{color:#c4b5fd;font-style:normal}
+.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:.92rem;font-weight:700;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;font-family:inherit}
+.bp{background:linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6);color:#fff;box-shadow:0 4px 20px rgba(109,40,217,.35)}
+.bp:hover{transform:translateY(-2px)}
+.bp:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.bg{background:linear-gradient(135deg,#059669,#10b981,#34d399);color:#fff;box-shadow:0 4px 20px rgba(16,185,129,.3)}
+.bo{background:transparent;border:1px solid #1a1a35;color:#9090b0;font-size:.8rem;padding:10px}
+.pc{animation:sup .4s}
+@keyframes sup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.ph{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pl{font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.pp{font-size:.9rem;color:#c4b5fd;font-weight:800}
+.pt{background:#141430;border-radius:10px;height:8px;overflow:hidden;border:1px solid #1a1a35}
+.pb{height:100%;border-radius:10px;background:linear-gradient(90deg,#6d28d9,#8b5cf6,#22d3ee);background-size:200% 100%;animation:gm 2s linear infinite;transition:width .5s}
+@keyframes gm{0%{background-position:0}100%{background-position:200% 0}}
+.ps{display:flex;gap:4px;margin-top:12px}
+.pst{flex:1;height:3px;border-radius:2px;background:#141430}
+.pst.done{background:#10b981}
+.pst.act{background:#8b5cf6;animation:pu 1s infinite}
+@keyframes pu{0%,100%{opacity:.5}50%{opacity:1}}
+.sm{padding:14px 16px;border-radius:14px;font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:10px;margin-top:14px;animation:sup .3s}
+.sm.ok{background:rgba(16,185,129,.06);color:#34d399;border:1px solid rgba(16,185,129,.15)}
+.sm.err{background:rgba(244,63,94,.06);color:#f43f5e;border:1px solid rgba(244,63,94,.15)}
+.sp{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.12);border-top-color:#fff;border-radius:50%;animation:sn .65s linear infinite;flex-shrink:0}
+@keyframes sn{to{transform:rotate(360deg)}}
+.hh{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ht{font-weight:800;font-size:.95rem}
+.hc{background:#6d28d9;color:#fff;font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:8px}
+.hi{display:flex;align-items:center;gap:12px;padding:12px;background:#141430;border-radius:12px;margin-bottom:8px;border:1px solid #1a1a35}
+.hic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(52,211,153,.08))}
+.hin{flex:1;min-width:0}
+.hn{font-size:.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs{font-size:.65rem;color:#505070;margin-top:2px}
+.ha{display:flex;gap:6px}
+.hb{padding:8px 12px;border:none;border-radius:8px;font-size:.72rem;cursor:pointer;font-weight:700}
+.hb.dl{background:rgba(16,185,129,.08);color:#10b981;border:1px solid rgba(16,185,129,.12)}
+.hb.rm{background:rgba(244,63,94,.08);color:#f43f5e;border:1px solid rgba(244,63,94,.12)}
+.es{text-align:center;padding:36px 20px}
+.ei{font-size:3rem;margin-bottom:12px;opacity:.5}
+.et{color:#505070;font-size:.85rem}
+.ft{text-align:center;padding:32px 0;color:#505070;font-size:.7rem}
+.mt{margin-top:8px}
+.vis{display:none}
 </style>
 </head>
 <body>
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
+<div class="orb a"></div>
+<div class="orb b"></div>
 <div class="wrap">
-<div class="header">
-<div class="logo"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+<div class="hd">
+<div class="lg"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
 <h1>Video2MP3 Pro</h1>
-<p class="subtitle">Professional Video to Audio Converter</p>
-<div class="badges"><span class="badge hf">🤗 Hugging Face</span><span class="badge">⚡ FFmpeg</span><span class="badge">🎧 Lossless</span><span class="badge">🔒 Private</span></div>
+<p class="sub">Professional Video to Audio Converter</p>
+<div class="bdg"><span class="hf">🤗 Hugging Face</span><span>⚡ FFmpeg</span><span>🎧 Lossless</span><span>🔒 Private</span></div>
 </div>
-<div class="tabs">
-<button class="tab active" onclick="switchTab('upload',this)">📁 Upload</button>
-<button class="tab" onclick="switchTab('url',this)">🔗 URL</button>
-<button class="tab" onclick="switchTab('history',this)">📋 History</button>
+<div class="tbs">
+<button class="tb on" id="tab1" onclick="switchTab(1)">📁 Upload</button>
+<button class="tb" id="tab2" onclick="switchTab(2)">🔗 URL</button>
+<button class="tb" id="tab3" onclick="switchTab(3)">📋 History</button>
 </div>
-<div id="tab-upload">
-<div class="card">
-<div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-<div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+
+<div id="panel1">
+<div class="cd">
+<div class="up" id="dropZone">
+<div class="ui"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
 <h3>Tap to select video</h3>
-<p>or drag & drop • MP4, MKV, AVI, MOV, WebM</p>
+<p>or drag and drop - MP4, MKV, AVI, MOV, WebM</p>
 <input type="file" id="fileInput" accept="video/*,.mp4,.avi,.mkv,.mov,.wmv,.flv,.webm,.3gp,.m4v">
 </div>
-<div id="fileInfo" class="file-info hidden">
-<div class="file-icon"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
-<div class="file-details"><div class="file-name" id="fileName"></div><div class="file-size" id="fileSize"></div></div>
-<button class="file-remove" onclick="removeFile()">✕</button>
+<div id="fileInfo" class="fi vis">
+<div class="fic"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div>
+<div class="fid"><div class="fin" id="fileName"></div><div class="fis" id="fileSize"></div></div>
+<button class="fr" onclick="removeFile()">✕</button>
 </div>
-<div class="format-section">
-<div class="section-label"><span class="dot"></span> OUTPUT FORMAT</div>
-<div class="format-grid" id="uploadFormatGrid">
-<div class="format-chip active" onclick="selectFormat(this,'mp3')">MP3<span class="fmt-sub">Lossy</span></div>
-<div class="format-chip" onclick="selectFormat(this,'flac')">FLAC<span class="fmt-sub">Lossless</span></div>
-<div class="format-chip" onclick="selectFormat(this,'wav')">WAV<span class="fmt-sub">Lossless</span></div>
-<div class="format-chip" onclick="selectFormat(this,'aac')">AAC<span class="fmt-sub">Lossy</span></div>
-<div class="format-chip" onclick="selectFormat(this,'ogg')">OGG<span class="fmt-sub">Lossy</span></div>
-<div class="format-chip" onclick="selectFormat(this,'opus')">OPUS<span class="fmt-sub">Lossy</span></div>
-<div class="format-chip" onclick="selectFormat(this,'m4a')">M4A<span class="fmt-sub">Lossy</span></div>
+<div class="fs">
+<div class="sl"><span class="dt"></span> OUTPUT FORMAT</div>
+<div class="fg" id="ufg">
+<div class="fc on" onclick="pickFmt(this,'mp3',1)">MP3<small>Lossy</small></div>
+<div class="fc" onclick="pickFmt(this,'flac',1)">FLAC<small>Lossless</small></div>
+<div class="fc" onclick="pickFmt(this,'wav',1)">WAV<small>Lossless</small></div>
+<div class="fc" onclick="pickFmt(this,'aac',1)">AAC<small>Lossy</small></div>
+<div class="fc" onclick="pickFmt(this,'ogg',1)">OGG<small>Lossy</small></div>
+<div class="fc" onclick="pickFmt(this,'opus',1)">OPUS<small>Lossy</small></div>
+<div class="fc" onclick="pickFmt(this,'m4a',1)">M4A<small>Lossy</small></div>
 </div>
 </div>
 <div style="margin-top:16px">
-<div class="section-label"><span class="dot"></span> QUALITY</div>
-<div class="settings-grid">
-<div class="setting"><label class="section-label" style="margin:0;font-size:0.65rem">Bitrate</label><select id="bitrate" onchange="updateQuality()"><option value="320k">320k</option><option value="256k">256k</option><option value="192k">192k</option><option value="128k">128k</option></select></div>
-<div class="setting"><label class="section-label" style="margin:0;font-size:0.65rem">Sample</label><select id="sampleRate" onchange="updateQuality()"><option value="48000">48kHz</option><option value="44100" selected>44.1kHz</option><option value="32000">32kHz</option></select></div>
-<div class="setting"><label class="section-label" style="margin:0;font-size:0.65rem">Depth</label><select id="bitDepth" onchange="updateQuality()"><option value="24">24-bit</option><option value="16" selected>16-bit</option></select></div>
+<div class="sl"><span class="dt"></span> QUALITY</div>
+<div class="sg">
+<div class="st"><label class="sl" style="margin:0;font-size:.65rem">Bitrate</label><select id="bitrate"><option value="320k">320k</option><option value="256k">256k</option><option value="192k">192k</option><option value="128k">128k</option></select></div>
+<div class="st"><label class="sl" style="margin:0;font-size:.65rem">Sample</label><select id="sampleRate"><option value="48000">48kHz</option><option value="44100" selected>44.1kHz</option><option value="32000">32kHz</option></select></div>
+<div class="st"><label class="sl" style="margin:0;font-size:.65rem">Depth</label><select id="bitDepth"><option value="24">24-bit</option><option value="16" selected>16-bit</option></select></div>
 </div>
 </div>
-<div class="quality-display" id="qualityDisplay"><div class="quality-icon">💎</div><div class="quality-text"><strong>MP3 320kbps</strong> @ 44.1kHz<br>Best quality</div></div>
-<button class="btn btn-primary" id="convertBtn" onclick="uploadFile()" disabled>🎵 Convert</button>
+<div class="qd" id="qDisp"><div class="qi">💎</div><div class="qt"><strong>MP3 320kbps</strong> at 44.1kHz<br>Best quality</div></div>
+<button class="btn bp" id="convertBtn" onclick="doUpload()" disabled>🎵 Convert</button>
 </div>
 </div>
-<div id="tab-url" class="hidden">
-<div class="card">
-<div class="url-wrap"><svg class="url-icon" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><input type="text" class="url-input" id="urlInput" placeholder="Paste video URL..."></div>
-<p class="url-hint">Supports <span>YouTube</span>, <span>Vimeo</span>, <span>TikTok</span> +1000 sites</p>
-<div class="format-section">
-<div class="section-label"><span class="dot"></span> FORMAT</div>
-<div class="format-grid" id="urlFormatGrid">
-<div class="format-chip active" onclick="selectUrlFormat(this,'mp3')">MP3</div>
-<div class="format-chip" onclick="selectUrlFormat(this,'flac')">FLAC</div>
-<div class="format-chip" onclick="selectUrlFormat(this,'wav')">WAV</div>
-<div class="format-chip" onclick="selectUrlFormat(this,'aac')">AAC</div>
-<div class="format-chip" onclick="selectUrlFormat(this,'ogg')">OGG</div>
-<div class="format-chip" onclick="selectUrlFormat(this,'m4a')">M4A</div>
+
+<div id="panel2" class="vis">
+<div class="cd">
+<div class="uw"><svg class="uic" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><input type="text" class="ui2" id="urlInput" placeholder="Paste video URL here..."></div>
+<p class="uh">Supports <em>YouTube</em>, <em>Vimeo</em>, <em>TikTok</em> and 1000+ sites</p>
+<div class="fs">
+<div class="sl"><span class="dt"></span> FORMAT</div>
+<div class="fg" id="ufg2">
+<div class="fc on" onclick="pickFmt(this,'mp3',2)">MP3</div>
+<div class="fc" onclick="pickFmt(this,'flac',2)">FLAC</div>
+<div class="fc" onclick="pickFmt(this,'wav',2)">WAV</div>
+<div class="fc" onclick="pickFmt(this,'aac',2)">AAC</div>
+<div class="fc" onclick="pickFmt(this,'ogg',2)">OGG</div>
+<div class="fc" onclick="pickFmt(this,'m4a',2)">M4A</div>
 </div>
 </div>
-<div class="settings-grid" style="margin-top:14px;grid-template-columns:1fr 1fr">
-<div class="setting"><label class="section-label" style="margin:0;font-size:0.65rem">Bitrate</label><select id="urlBitrate"><option value="320k">320k</option><option value="256k">256k</option><option value="192k">192k</option><option value="128k">128k</option></select></div>
-<div class="setting"><label class="section-label" style="margin:0;font-size:0.65rem">Quality</label><select id="urlQuality"><option value="0">Best</option><option value="5">Good</option></select></div>
+<div class="sg" style="margin-top:14px;grid-template-columns:1fr 1fr">
+<div class="st"><label class="sl" style="margin:0;font-size:.65rem">Bitrate</label><select id="urlBitrate"><option value="320k">320k</option><option value="256k">256k</option><option value="192k">192k</option><option value="128k">128k</option></select></div>
+<div class="st"><label class="sl" style="margin:0;font-size:.65rem">Quality</label><select id="urlQuality"><option value="0">Best</option><option value="5">Good</option></select></div>
 </div>
-<button class="btn btn-primary" id="urlBtn" onclick="convertUrl()">🔗 Download & Convert</button>
-</div>
-</div>
-<div id="tab-history" class="hidden">
-<div class="card">
-<div class="history-header"><span class="history-title">📋 Files<span class="history-count" id="historyCount">0</span></span><button class="btn-outline" style="width:auto;margin:0;padding:7px 14px;font-size:0.72rem;border-radius:8px" onclick="cleanAll()">🧹 Clean</button></div>
-<div id="historyList"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No files yet</div></div></div>
+<button class="btn bp" id="urlBtn" onclick="doUrl()">🔗 Download and Convert</button>
 </div>
 </div>
-<div id="progressCard" class="card progress-card hidden">
-<div class="progress-header"><span class="progress-label" id="progressLabel"><span class="spinner"></span> Working...</span><span class="progress-pct" id="progressPct">0%</span></div>
-<div class="progress-track"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
-<div class="progress-steps"><div class="progress-step active" id="step1"></div><div class="progress-step" id="step2"></div><div class="progress-step" id="step3"></div></div>
+
+<div id="panel3" class="vis">
+<div class="cd">
+<div class="hh"><span class="ht">📋 Files<span class="hc" id="hCnt">0</span></span><button class="bo" style="width:auto;margin:0;padding:7px 14px;font-size:.72rem;border-radius:8px" onclick="cleanAll()">🧹 Clean</button></div>
+<div id="hList"><div class="es"><div class="ei">📭</div><div class="et">No files yet</div></div></div>
 </div>
-<div id="statusMsg" class="hidden"></div>
-<div id="downloadSection" class="hidden">
-<button class="btn btn-green" id="downloadBtn" onclick="downloadFile()">⬇️ Download</button>
-<button class="btn btn-outline mt-sm" onclick="convertAnother()">🔄 Convert Another</button>
 </div>
-<div class="footer"><p>Video2MP3 Pro • 🤗 Hugging Face Spaces</p><p>All processing happens on the server • No data stored</p></div>
+
+<div id="progCard" class="cd pc vis">
+<div class="ph"><span class="pl" id="progLabel"><span class="sp"></span> Working...</span><span class="pp" id="progPct">0%</span></div>
+<div class="pt"><div class="pb" id="progBar" style="width:0%"></div></div>
+<div class="ps"><div class="pst act" id="s1"></div><div class="pst" id="s2"></div><div class="pst" id="s3"></div></div>
 </div>
+
+<div id="statusBox" class="vis"></div>
+
+<div id="dlSection" class="vis">
+<button class="btn bg" onclick="doDownload()">⬇️ Download</button>
+<button class="btn bo mt" onclick="doAnother()">🔄 Convert Another</button>
+</div>
+
+<div class="ft"><p>Video2MP3 Pro - Hugging Face Spaces</p><p>All processing on server - No data stored</p></div>
+</div>
+
 <script>
-let selectedFile=null,taskId=null,progressInterval=null;
-let selectedFormat='mp3',urlFormat='mp3';
-function switchTab(name,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');['upload','url','history'].forEach(t=>{document.getElementById('tab-'+t).classList[t===name?'remove':'add']('hidden')});if(name==='history')loadHistory()}
-function selectFormat(el,fmt){selectedFormat=fmt;document.getElementById('uploadFormatGrid').querySelectorAll('.format-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');updateQuality()}
-function selectUrlFormat(el,fmt){urlFormat=fmt;document.getElementById('urlFormatGrid').querySelectorAll('.format-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active')}
-function updateQuality(){const br=document.getElementById('bitrate').value;const sr=document.getElementById('sampleRate').value;const fmt=selectedFormat.toUpperCase();const srL={48000:'48kHz',44100:'44.1kHz',32000:'32kHz'}[sr]||sr;const el=document.getElementById('qualityDisplay');let icon='💎',desc='';if(['flac','wav'].includes(selectedFormat)){icon='💎';desc=`<strong>${fmt} Lossless</strong> @ ${srL}<br>Studio quality`}else{icon='🎵';desc=`<strong>${fmt} ${br}</strong> @ ${srL}<br>Great quality`}el.innerHTML=`<div class="quality-icon">${icon}</div><div class="quality-text">${desc}</div>`}
-const dz=document.getElementById('dropZone');['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag')}));['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag')}));dz.addEventListener('drop',e=>{if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0])});document.getElementById('fileInput').onchange=e=>{if(e.target.files.length)handleFile(e.target.files[0])};
-function handleFile(file){selectedFile=file;document.getElementById('fileName').textContent=file.name;document.getElementById('fileSize').textContent=formatSize(file.size);document.getElementById('fileInfo').classList.remove('hidden');document.getElementById('dropZone').classList.add('hidden');document.getElementById('convertBtn').disabled=false}
-function removeFile(){selectedFile=null;document.getElementById('fileInfo').classList.add('hidden');document.getElementById('dropZone').classList.remove('hidden');document.getElementById('convertBtn').disabled=true;document.getElementById('fileInput').value='';resetUI()}
-function formatSize(b){if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' KB';if(b<1073741824)return(b/1048576).toFixed(1)+' MB';return(b/1073741824).toFixed(2)+' GB'}
-function showStatus(msg,type,size){const el=document.getElementById('statusMsg');const sizeHtml=size?`<span style="display:block;font-size:0.72rem;opacity:0.8;margin-top:2px">${size}</span>`:'';el.className='status '+type;el.innerHTML=`<span style="font-size:1.2rem">${type==='success'?'✅':'❌'}</span><div>${msg}${sizeHtml}</div>`;el.classList.remove('hidden')}
-function hideStatus(){document.getElementById('statusMsg').classList.add('hidden')}
-function resetUI(){hideStatus();document.getElementById('progressCard').classList.add('hidden');document.getElementById('downloadSection').classList.add('hidden');if(progressInterval)clearInterval(progressInterval);for(let i=1;i<=3;i++)document.getElementById('step'+i).className='progress-step'}
-function convertAnother(){resetUI();removeFile()}
-async function uploadFile(){if(!selectedFile)return;resetUI();const fd=new FormData();fd.append('file',selectedFile);fd.append('bitrate',document.getElementById('bitrate').value);fd.append('format',selectedFormat);fd.append('sample_rate',document.getElementById('sampleRate').value);fd.append('bit_depth',document.getElementById('bitDepth').value);const btn=document.getElementById('convertBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Uploading...';document.getElementById('progressCard').classList.remove('hidden');document.getElementById('step1').className='progress-step active';try{const r=await fetch('/upload',{method:'POST',body:fd});const d=await r.json();if(d.error){showStatus(d.error,'error');btn.disabled=false;btn.innerHTML='🎵 Convert';return}taskId=d.task_id;document.getElementById('step1').className='progress-step done';document.getElementById('step2').className='progress-step active';btn.innerHTML='<span class="spinner"></span> Converting...';trackProgress(btn,'🎵 Convert')}catch(e){showStatus('Failed: '+e.message,'error');btn.disabled=false;btn.innerHTML='🎵 Convert'}}
-async function convertUrl(){const url=document.getElementById('urlInput').value.trim();if(!url){showStatus('Paste a URL','error');return}resetUI();const btn=document.getElementById('urlBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Starting...';document.getElementById('progressCard').classList.remove('hidden');document.getElementById('step1').className='progress-step active';try{const r=await fetch('/convert-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,bitrate:document.getElementById('urlBitrate').value,format:urlFormat})});const d=await r.json();if(d.error){showStatus(d.error,'error');btn.disabled=false;btn.innerHTML='🔗 Download & Convert';return}taskId=d.task_id;document.getElementById('step1').className='progress-step done';document.getElementById('step2').className='progress-step active';btn.innerHTML='<span class="spinner"></span> Processing...';trackProgress(btn,'🔗 Download & Convert')}catch(e){showStatus('Failed','error');btn.disabled=false;btn.innerHTML='🔗 Download & Convert'}}
-function trackProgress(btn,resetLabel){progressInterval=setInterval(async()=>{try{const r=await fetch('/progress/'+taskId);const d=await r.json();const pct=d.progress||0;document.getElementById('progressBar').style.width=pct+'%';document.getElementById('progressPct').textContent=pct+'%';if(d.status==='downloading'){document.getElementById('progressLabel').innerHTML='<span class="spinner"></span> Downloading...'}else if(d.status==='converting'){document.getElementById('progressLabel').innerHTML='<span class="spinner"></span> Converting...';document.getElementById('step2').className='progress-step done';document.getElementById('step3').className='progress-step active'}if(d.status==='completed'){clearInterval(progressInterval);document.getElementById('progressBar').style.width='100%';document.getElementById('progressPct').textContent='100%';document.getElementById('progressLabel').innerHTML='✅ Done!';for(let i=1;i<=3;i++)document.getElementById('step'+i).className='progress-step done';showStatus('Ready to download!','success',d.file_size?formatSize(d.file_size):'');document.getElementById('downloadSection').classList.remove('hidden');btn.disabled=false;btn.innerHTML=resetLabel}else if(d.status==='error'){clearInterval(progressInterval);document.getElementById('progressCard').classList.add('hidden');showStatus(d.message||'Failed','error');btn.disabled=false;btn.innerHTML=resetLabel}}{}},800)}
-function downloadFile(){window.location.href='/download/'+taskId;setTimeout(()=>{hideStatus();document.getElementById('downloadSection').classList.add('hidden');document.getElementById('progressCard').classList.add('hidden')},2000)}
-async function loadHistory(){try{const r=await fetch('/history');const items=await r.json();const list=document.getElementById('historyList');document.getElementById('historyCount').textContent=items.length;if(!items.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No files yet</div></div>';return}list.innerHTML=items.map(item=>`<div class="history-item" id="h-${item.task_id}"><div class="h-icon">🎵</div><div class="h-info"><div class="h-name">${item.filename}</div><div class="h-size">${formatSize(item.file_size)}</div></div><div class="h-actions"><button class="h-btn dl" onclick="window.location.href='/download/${item.task_id}'">⬇️</button><button class="h-btn rm" onclick="deleteItem('${item.task_id}')">🗑️</button></div></div>`).join('')}catch(e){}}
-async function deleteItem(tid){await fetch('/delete/'+tid,{method:'POST'});const el=document.getElementById('h-'+tid);if(el)el.remove();if(!document.querySelectorAll('.history-item').length){document.getElementById('historyList').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No files yet</div></div>';document.getElementById('historyCount').textContent='0'}}
-async function cleanAll(){await fetch('/cleanup',{method:'POST'});document.getElementById('historyList').innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">Cleaned!</div></div>';document.getElementById('historyCount').textContent='0'}
+var selFile = null, tId = null, pInt = null, fmt1 = 'mp3', fmt2 = 'mp3';
+
+/* Tab switch */
+function switchTab(n) {
+  var tabs = document.querySelectorAll('.tb');
+  var panels = [document.getElementById('panel1'), document.getElementById('panel2'), document.getElementById('panel3')];
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.remove('on');
+    panels[i].classList.add('vis');
+  }
+  tabs[n-1].classList.add('on');
+  panels[n-1].classList.remove('vis');
+  if (n === 3) loadHistory();
+}
+
+/* Format pick */
+function pickFmt(el, fmt, panel) {
+  var grid = panel === 1 ? document.getElementById('ufg') : document.getElementById('ufg2');
+  var chips = grid.querySelectorAll('.fc');
+  for (var i = 0; i < chips.length; i++) chips[i].classList.remove('on');
+  el.classList.add('on');
+  if (panel === 1) { fmt1 = fmt; updateQ(); }
+  else { fmt2 = fmt; }
+}
+
+/* Quality info */
+function updateQ() {
+  var br = document.getElementById('bitrate').value;
+  var sr = document.getElementById('sampleRate').value;
+  var fmt = fmt1.toUpperCase();
+  var srL = {'48000':'48kHz','44100':'44.1kHz','32000':'32kHz'}[sr] || sr;
+  var el = document.getElementById('qDisp');
+  if (fmt1 === 'flac' || fmt1 === 'wav') {
+    el.innerHTML = '<div class="qi">💎</div><div class="qt"><strong>' + fmt + ' Lossless</strong> at ' + srL + '<br>Studio quality</div>';
+  } else {
+    el.innerHTML = '<div class="qi">🎵</div><div class="qt"><strong>' + fmt + ' ' + br + '</strong> at ' + srL + '<br>Great quality</div>';
+  }
+}
+
+/* File handling */
+var dz = document.getElementById('dropZone');
+dz.onclick = function() { document.getElementById('fileInput').click(); };
+dz.ondragover = function(e) { e.preventDefault(); dz.style.borderColor = '#8b5cf6'; };
+dz.ondragleave = function() { dz.style.borderColor = '#252545'; };
+dz.ondrop = function(e) { e.preventDefault(); dz.style.borderColor = '#252545'; if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); };
+document.getElementById('fileInput').onchange = function(e) { if (e.target.files.length) handleFile(e.target.files[0]); };
+
+function handleFile(f) {
+  selFile = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = fmtSize(f.size);
+  document.getElementById('fileInfo').classList.remove('vis');
+  dz.classList.add('vis');
+  document.getElementById('convertBtn').disabled = false;
+}
+function removeFile() {
+  selFile = null;
+  document.getElementById('fileInfo').classList.add('vis');
+  dz.classList.remove('vis');
+  document.getElementById('convertBtn').disabled = true;
+  document.getElementById('fileInput').value = '';
+  resetAll();
+}
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+
+/* Status */
+function showSt(msg, type, sz) {
+  var el = document.getElementById('statusBox');
+  var icon = type === 'ok' ? '✅' : '❌';
+  var sizeHtml = sz ? '<span style="display:block;font-size:.72rem;opacity:.8;margin-top:2px">' + sz + '</span>' : '';
+  el.className = 'sm ' + type;
+  el.innerHTML = '<span style="font-size:1.2rem">' + icon + '</span><div>' + msg + sizeHtml + '</div>';
+  el.classList.remove('vis');
+}
+function hideSt() { document.getElementById('statusBox').classList.add('vis'); }
+
+function resetAll() {
+  hideSt();
+  document.getElementById('progCard').classList.add('vis');
+  document.getElementById('dlSection').classList.add('vis');
+  if (pInt) clearInterval(pInt);
+  resetSteps();
+}
+function resetSteps() {
+  for (var i = 1; i <= 3; i++) document.getElementById('s' + i).className = 'pst';
+}
+function doAnother() { resetAll(); removeFile(); }
+
+/* Upload */
+function doUpload() {
+  if (!selFile) return;
+  resetAll();
+  var fd = new FormData();
+  fd.append('file', selFile);
+  fd.append('bitrate', document.getElementById('bitrate').value);
+  fd.append('format', fmt1);
+  fd.append('sample_rate', document.getElementById('sampleRate').value);
+  fd.append('bit_depth', document.getElementById('bitDepth').value);
+  var btn = document.getElementById('convertBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp"></span> Uploading...';
+  document.getElementById('progCard').classList.remove('vis');
+  document.getElementById('s1').className = 'pst act';
+  fetch('/upload', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) { showSt(d.error, 'err'); btn.disabled = false; btn.innerHTML = '🎵 Convert'; return; }
+      tId = d.task_id;
+      document.getElementById('s1').className = 'pst done';
+      document.getElementById('s2').className = 'pst act';
+      btn.innerHTML = '<span class="sp"></span> Converting...';
+      track(btn, '🎵 Convert');
+    })
+    .catch(function(e) { showSt('Upload failed', 'err'); btn.disabled = false; btn.innerHTML = '🎵 Convert'; });
+}
+
+/* URL */
+function doUrl() {
+  var url = document.getElementById('urlInput').value.trim();
+  if (!url) { showSt('Paste a URL', 'err'); return; }
+  resetAll();
+  var btn = document.getElementById('urlBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp"></span> Starting...';
+  document.getElementById('progCard').classList.remove('vis');
+  document.getElementById('s1').className = 'pst act';
+  fetch('/convert-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: url, bitrate: document.getElementById('urlBitrate').value, format: fmt2 })
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.error) { showSt(d.error, 'err'); btn.disabled = false; btn.innerHTML = '🔗 Download and Convert'; return; }
+      tId = d.task_id;
+      document.getElementById('s1').className = 'pst done';
+      document.getElementById('s2').className = 'pst act';
+      btn.innerHTML = '<span class="sp"></span> Processing...';
+      track(btn, '🔗 Download and Convert');
+    })
+    .catch(function() { showSt('Failed', 'err'); btn.disabled = false; btn.innerHTML = '🔗 Download and Convert'; });
+}
+
+/* Progress */
+function track(btn, resetLabel) {
+  pInt = setInterval(function() {
+    fetch('/progress/' + tId)
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var pct = d.progress || 0;
+        document.getElementById('progBar').style.width = pct + '%';
+        document.getElementById('progPct').textContent = pct + '%';
+        if (d.status === 'downloading') document.getElementById('progLabel').innerHTML = '<span class="sp"></span> Downloading...';
+        if (d.status === 'converting') {
+          document.getElementById('progLabel').innerHTML = '<span class="sp"></span> Converting...';
+          document.getElementById('s2').className = 'pst done';
+          document.getElementById('s3').className = 'pst act';
+        }
+        if (d.status === 'completed') {
+          clearInterval(pInt);
+          document.getElementById('progBar').style.width = '100%';
+          document.getElementById('progPct').textContent = '100%';
+          document.getElementById('progLabel').innerHTML = '✅ Done!';
+          for (var i = 1; i <= 3; i++) document.getElementById('s' + i).className = 'pst done';
+          showSt('Ready to download!', 'ok', d.file_size ? fmtSize(d.file_size) : '');
+          document.getElementById('dlSection').classList.remove('vis');
+          btn.disabled = false;
+          btn.innerHTML = resetLabel;
+        }
+        if (d.status === 'error') {
+          clearInterval(pInt);
+          document.getElementById('progCard').classList.add('vis');
+          showSt(d.message || 'Failed', 'err');
+          btn.disabled = false;
+          btn.innerHTML = resetLabel;
+        }
+      })
+      .catch(function() {});
+  }, 800);
+}
+
+/* Download */
+function doDownload() {
+  window.location.href = '/download/' + tId;
+  setTimeout(function() {
+    hideSt();
+    document.getElementById('dlSection').classList.add('vis');
+    document.getElementById('progCard').classList.add('vis');
+  }, 2000);
+}
+
+/* History */
+function loadHistory() {
+  fetch('/history')
+    .then(function(r) { return r.json(); })
+    .then(function(items) {
+      var list = document.getElementById('hList');
+      document.getElementById('hCnt').textContent = items.length;
+      if (!items.length) { list.innerHTML = '<div class="es"><div class="ei">📭</div><div class="et">No files yet</div></div>'; return; }
+      var html = '';
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        html += '<div class="hi" id="h-' + it.task_id + '"><div class="hic">🎵</div><div class="hin"><div class="hn">' + it.filename + '</div><div class="hs">' + fmtSize(it.file_size) + '</div></div><div class="ha"><button class="hb dl" onclick="window.location.href=\'/download/' + it.task_id + '\'">⬇️</button><button class="hb rm" onclick="delItem(\'' + it.task_id + '\')">🗑️</button></div></div>';
+      }
+      list.innerHTML = html;
+    })
+    .catch(function() {});
+}
+function delItem(tid) {
+  fetch('/delete/' + tid, { method: 'POST' }).then(function() {
+    var el = document.getElementById('h-' + tid);
+    if (el) el.remove();
+    if (!document.querySelectorAll('.hi').length) {
+      document.getElementById('hList').innerHTML = '<div class="es"><div class="ei">📭</div><div class="et">No files yet</div></div>';
+      document.getElementById('hCnt').textContent = '0';
+    }
+  });
+}
+function cleanAll() {
+  fetch('/cleanup', { method: 'POST' }).then(function() {
+    document.getElementById('hList').innerHTML = '<div class="es"><div class="ei">📭</div><div class="et">Cleaned!</div></div>';
+    document.getElementById('hCnt').textContent = '0';
+  });
+}
 </script>
 </body>
 </html>
