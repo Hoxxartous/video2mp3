@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-import os, uuid, subprocess, json, threading, sys
+import os, uuid, subprocess, json, threading, ssl, urllib.request
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
+
+# Fix SSL
+os.environ['CURL_CA_BUNDLE'] = ''
+os.environ['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
@@ -69,28 +73,40 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
         
         cmd = [
             'yt-dlp',
-            '-x',                              # Extract audio
-            '--audio-format', fmt,             # Convert to format
-            '--audio-quality', '0',            # Best quality
-            '-o', output_base + '.%(ext)s',    # Output template
-            '--no-playlist',                   # Single video only
-            '--newline',                       # Progress on new lines
-            '--no-check-certificates',         # Skip cert check
-            '--geo-bypass',                    # Bypass geo-restrictions
+            '-x',
+            '--audio-format', fmt,
+            '--audio-quality', '0',
+            '-o', output_base + '.%(ext)s',
+            '--no-playlist',
+            '--newline',
+            '--no-check-certificates',
+            '--geo-bypass',
+            '--force-ipv4',
+            '--legacy-server-connect',
             '--no-warnings',
-            '--verbose',                       # Verbose for debugging
-            '--progress',                      # Show progress
+            '--progress',
+            '--extractor-retries', '3',
+            '--retries', '3',
+            '--fragment-retries', '3',
+            '--socket-timeout', '30',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             url
         ]
         
-        print(f"[yt-dlp] Starting download: {url}", flush=True)
-        print(f"[yt-dlp] Command: {' '.join(cmd)}", flush=True)
+        print(f"[yt-dlp] Starting: {url}", flush=True)
+        
+        my_env = os.environ.copy()
+        my_env['CURL_CA_BUNDLE'] = ''
+        my_env['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
+        my_env['SSL_CERT_FILE'] = '/etc/ssl/certs/ca-certificates.crt'
+        my_env['PYTHONHTTPSVERIFY'] = '0'
         
         process = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
-            universal_newlines=True
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            env=my_env
         )
         
         all_output = []
@@ -106,11 +122,11 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
                         if '%' in part:
                             pct = float(part.replace('%',''))
                             conversions[task_id]['progress'] = min(int(pct),99)
-                            conversions[task_id]['status'] = 'downloading' if pct < 99 else 'converting'
+                            conversions[task_id]['status'] = 'downloading'
                             break
                 except: pass
             
-            if '[ExtractAudio]' in line or 'Extracting' in line:
+            if 'ExtractAudio' in line or 'Extracting' in line:
                 conversions[task_id]['status'] = 'converting'
                 conversions[task_id]['progress'] = 95
                 
@@ -118,14 +134,11 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
         
         print(f"[yt-dlp] Exit code: {process.returncode}", flush=True)
         
-        # Find the actual output file
         actual = None
-        possible_exts = ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.aiff','.wma','.mp4','.mkv','.webm']
-        for ext in possible_exts:
+        for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv','.webm']:
             test_path = output_base + ext
             if os.path.exists(test_path):
                 actual = test_path
-                print(f"[yt-dlp] Found output: {actual}", flush=True)
                 break
         
         if process.returncode == 0 and actual and os.path.exists(actual):
@@ -141,16 +154,13 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
             print(f"[yt-dlp] Success: {fname} ({size} bytes)", flush=True)
         else:
             error_msg = 'Download failed. '
-            if all_output:
-                for line in reversed(all_output[-20:]):
-                    if 'error' in line.lower() or 'err:' in line.lower():
-                        error_msg += line[:100]
-                        break
-                else:
-                    error_msg += 'Check URL and try again.'
+            for line in reversed(all_output[-20:]):
+                if 'error' in line.lower() or 'ssl' in line.lower():
+                    error_msg = line[:150]
+                    break
             conversions[task_id] = {'status':'error','message':error_msg}
-            print(f"[yt-dlp] FAILED. Last output:", flush=True)
-            for line in all_output[-10:]:
+            print(f"[yt-dlp] FAILED", flush=True)
+            for line in all_output[-15:]:
                 print(f"  {line}", flush=True)
                 
     except Exception as e:
@@ -185,16 +195,12 @@ def convert_url():
     data = request.get_json()
     url = data.get('url','').strip()
     if not url: return jsonify({'error':'No URL provided'}),400
-    
-    # Auto-fix URL
     if not url.startswith('http'):
         url = 'https://' + url
-    
     bitrate = data.get('bitrate','320k')
     fmt = data.get('format','mp3')
     task_id = str(uuid.uuid4())[:8]
     output_path = os.path.join(app.config['CONVERTED_FOLDER'], f'audio_{task_id}.{fmt}')
-    
     thread = threading.Thread(target=convert_url_to_audio, args=(url,output_path,task_id,bitrate,fmt))
     thread.daemon = True; thread.start()
     return jsonify({'task_id':task_id,'message':'Processing'})
@@ -252,20 +258,13 @@ if __name__ == '__main__':
     print("  Video2MP3 Pro")
     print(f"  Port: {port}")
     print("="*50)
-    
-    # Check yt-dlp version
     try:
         r = subprocess.run(['yt-dlp','--version'], capture_output=True, text=True)
-        print(f"  yt-dlp version: {r.stdout.strip()}", flush=True)
-    except:
-        print("  WARNING: yt-dlp not found!", flush=True)
-    
-    # Check ffmpeg
+        print(f"  yt-dlp: {r.stdout.strip()}", flush=True)
+    except: print("  WARNING: yt-dlp not found!", flush=True)
     try:
         r = subprocess.run(['ffmpeg','-version'], capture_output=True, text=True)
-        print(f"  ffmpeg: {r.stdout.split(chr(10))[0][:50]}", flush=True)
-    except:
-        print("  WARNING: ffmpeg not found!", flush=True)
-    
+        print(f"  ffmpeg: OK", flush=True)
+    except: print("  WARNING: ffmpeg not found!", flush=True)
     print("="*50)
     app.run(host='0.0.0.0', port=port, debug=False)
