@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, uuid, subprocess, json, threading
+import os, uuid, subprocess, json, threading, sys
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 
@@ -64,43 +64,97 @@ def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', s
 def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
     try:
         conversions[task_id] = {'status':'downloading','progress':0}
-        # Use cookies and user-agent to avoid blocks
+        
+        output_base = output_path.rsplit('.',1)[0]
+        
         cmd = [
             'yt-dlp',
-            '--extract-audio',
-            '--audio-format', fmt,
-            '--audio-quality', '0',
-            '--output', output_path.rsplit('.',1)[0]+'.%(ext)s',
-            '--no-playlist',
-            '--newline',
-            '--no-check-certificates',
-            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            '--referer', 'https://www.google.com/',
-            '--add-header', 'Accept-Language:en-US,en;q=0.9',
-            '--geo-bypass',
+            '-x',                              # Extract audio
+            '--audio-format', fmt,             # Convert to format
+            '--audio-quality', '0',            # Best quality
+            '-o', output_base + '.%(ext)s',    # Output template
+            '--no-playlist',                   # Single video only
+            '--newline',                       # Progress on new lines
+            '--no-check-certificates',         # Skip cert check
+            '--geo-bypass',                    # Bypass geo-restrictions
             '--no-warnings',
+            '--verbose',                       # Verbose for debugging
+            '--progress',                      # Show progress
             url
         ]
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+        
+        print(f"[yt-dlp] Starting download: {url}", flush=True)
+        print(f"[yt-dlp] Command: {' '.join(cmd)}", flush=True)
+        
+        process = subprocess.Popen(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            universal_newlines=True
+        )
+        
+        all_output = []
         for line in process.stdout:
-            if '%' in line:
+            line = line.strip()
+            all_output.append(line)
+            print(f"[yt-dlp] {line}", flush=True)
+            
+            if '[download]' in line and '%' in line:
                 try:
-                    p = float(line.split('%')[0].strip().split()[-1])
-                    conversions[task_id]['progress'] = min(int(p),99)
-                    conversions[task_id]['status'] = 'downloading' if p < 100 else 'converting'
+                    parts = line.split()
+                    for part in parts:
+                        if '%' in part:
+                            pct = float(part.replace('%',''))
+                            conversions[task_id]['progress'] = min(int(pct),99)
+                            conversions[task_id]['status'] = 'downloading' if pct < 99 else 'converting'
+                            break
                 except: pass
+            
+            if '[ExtractAudio]' in line or 'Extracting' in line:
+                conversions[task_id]['status'] = 'converting'
+                conversions[task_id]['progress'] = 95
+                
         process.wait()
-        actual = output_path
-        if not os.path.exists(actual):
-            base = output_path.rsplit('.',1)[0]
-            for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.aiff','.wma']:
-                if os.path.exists(base+ext):
-                    actual = base+ext; break
-        if process.returncode == 0 and os.path.exists(actual):
-            conversions[task_id] = {'status':'completed','progress':100,'output_path':actual,'file_size':os.path.getsize(actual),'filename':os.path.basename(actual)}
+        
+        print(f"[yt-dlp] Exit code: {process.returncode}", flush=True)
+        
+        # Find the actual output file
+        actual = None
+        possible_exts = ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.aiff','.wma','.mp4','.mkv','.webm']
+        for ext in possible_exts:
+            test_path = output_base + ext
+            if os.path.exists(test_path):
+                actual = test_path
+                print(f"[yt-dlp] Found output: {actual}", flush=True)
+                break
+        
+        if process.returncode == 0 and actual and os.path.exists(actual):
+            size = os.path.getsize(actual)
+            fname = os.path.basename(actual)
+            conversions[task_id] = {
+                'status':'completed',
+                'progress':100,
+                'output_path':actual,
+                'file_size':size,
+                'filename':fname
+            }
+            print(f"[yt-dlp] Success: {fname} ({size} bytes)", flush=True)
         else:
-            conversions[task_id] = {'status':'error','message':'Download failed. Check URL or try again.'}
+            error_msg = 'Download failed. '
+            if all_output:
+                for line in reversed(all_output[-20:]):
+                    if 'error' in line.lower() or 'err:' in line.lower():
+                        error_msg += line[:100]
+                        break
+                else:
+                    error_msg += 'Check URL and try again.'
+            conversions[task_id] = {'status':'error','message':error_msg}
+            print(f"[yt-dlp] FAILED. Last output:", flush=True)
+            for line in all_output[-10:]:
+                print(f"  {line}", flush=True)
+                
     except Exception as e:
+        print(f"[yt-dlp] Exception: {str(e)}", flush=True)
         conversions[task_id] = {'status':'error','message':str(e)}
 
 @app.route('/')
@@ -130,11 +184,17 @@ def upload_file():
 def convert_url():
     data = request.get_json()
     url = data.get('url','').strip()
-    if not url: return jsonify({'error':'No URL'}),400
+    if not url: return jsonify({'error':'No URL provided'}),400
+    
+    # Auto-fix URL
+    if not url.startswith('http'):
+        url = 'https://' + url
+    
     bitrate = data.get('bitrate','320k')
     fmt = data.get('format','mp3')
     task_id = str(uuid.uuid4())[:8]
     output_path = os.path.join(app.config['CONVERTED_FOLDER'], f'audio_{task_id}.{fmt}')
+    
     thread = threading.Thread(target=convert_url_to_audio, args=(url,output_path,task_id,bitrate,fmt))
     thread.daemon = True; thread.start()
     return jsonify({'task_id':task_id,'message':'Processing'})
@@ -151,7 +211,10 @@ def download_file(task_id):
     if task['status'] != 'completed': return jsonify({'error':'Not ready'}),400
     path = task['output_path']
     fname = task.get('filename', os.path.basename(path))
-    if '_' in fname: fname = '_'.join(fname.split('_')[1:])
+    if '_' in fname:
+        parts = fname.split('_')
+        if len(parts) > 1:
+            fname = '_'.join(parts[1:])
     return send_file(path, as_attachment=True, download_name=fname)
 
 @app.route('/history')
@@ -185,5 +248,24 @@ def cleanup():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7860))
-    print(f"Video2MP3 running on port {port}")
+    print("="*50)
+    print("  Video2MP3 Pro")
+    print(f"  Port: {port}")
+    print("="*50)
+    
+    # Check yt-dlp version
+    try:
+        r = subprocess.run(['yt-dlp','--version'], capture_output=True, text=True)
+        print(f"  yt-dlp version: {r.stdout.strip()}", flush=True)
+    except:
+        print("  WARNING: yt-dlp not found!", flush=True)
+    
+    # Check ffmpeg
+    try:
+        r = subprocess.run(['ffmpeg','-version'], capture_output=True, text=True)
+        print(f"  ffmpeg: {r.stdout.split(chr(10))[0][:50]}", flush=True)
+    except:
+        print("  WARNING: ffmpeg not found!", flush=True)
+    
+    print("="*50)
     app.run(host='0.0.0.0', port=port, debug=False)
