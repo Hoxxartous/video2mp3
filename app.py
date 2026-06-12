@@ -64,7 +64,23 @@ def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', s
 def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
     try:
         conversions[task_id] = {'status':'downloading','progress':0}
-        cmd = ['yt-dlp','--extract-audio','--audio-format',fmt,'--audio-quality','0','--output',output_path.rsplit('.',1)[0]+'.%(ext)s','--no-playlist','--newline',url]
+        # Use cookies and user-agent to avoid blocks
+        cmd = [
+            'yt-dlp',
+            '--extract-audio',
+            '--audio-format', fmt,
+            '--audio-quality', '0',
+            '--output', output_path.rsplit('.',1)[0]+'.%(ext)s',
+            '--no-playlist',
+            '--newline',
+            '--no-check-certificates',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            '--referer', 'https://www.google.com/',
+            '--add-header', 'Accept-Language:en-US,en;q=0.9',
+            '--geo-bypass',
+            '--no-warnings',
+            url
+        ]
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
         for line in process.stdout:
             if '%' in line:
@@ -77,13 +93,13 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
         actual = output_path
         if not os.path.exists(actual):
             base = output_path.rsplit('.',1)[0]
-            for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac']:
+            for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.aiff','.wma']:
                 if os.path.exists(base+ext):
                     actual = base+ext; break
         if process.returncode == 0 and os.path.exists(actual):
             conversions[task_id] = {'status':'completed','progress':100,'output_path':actual,'file_size':os.path.getsize(actual),'filename':os.path.basename(actual)}
         else:
-            conversions[task_id] = {'status':'error','message':'Download failed'}
+            conversions[task_id] = {'status':'error','message':'Download failed. Check URL or try again.'}
     except Exception as e:
         conversions[task_id] = {'status':'error','message':str(e)}
 
@@ -169,5 +185,5 @@ def cleanup():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7860))
-    print(f"🎵 Video2MP3 running on port {port}")
+    print(f"Video2MP3 running on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)

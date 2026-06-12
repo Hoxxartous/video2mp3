@@ -62,8 +62,18 @@ h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#fff,#c4b5
 .ui2:focus{border-color:#8b5cf6}
 .ui2::placeholder{color:#505070}
 .uic{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;stroke:#505070;fill:none;stroke-width:2}
-.uh{font-size:.68rem;color:#505070;margin-top:8px}
-.uh em{color:#c4b5fd;font-style:normal}
+.uh{font-size:.68rem;color:#505070;margin-top:8px;line-height:1.6}
+.uh em{color:#c4b5fd;font-style:normal;font-weight:600}
+/* Platform chips */
+.plats{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 4px}
+.plat{display:inline-flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;font-size:.7rem;font-weight:600;cursor:pointer;border:1px solid #1a1a35;background:#141430;color:#9090b0;transition:.2s}
+.plat:hover{border-color:#8b5cf6;color:#f0f0ff;transform:translateY(-1px)}
+.plat .pi{font-size:.85rem}
+/* Quick platform links */
+.quick-links{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
+.ql{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 8px;border-radius:10px;border:1px solid #1a1a35;background:#141430;color:#9090b0;font-size:.72rem;font-weight:600;cursor:pointer;transition:.25s}
+.ql:hover{border-color:#8b5cf6;color:#f0f0ff;background:rgba(109,40,217,.06)}
+.ql .qi2{font-size:1.1rem}
 .btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:.92rem;font-weight:700;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;font-family:inherit}
 .bp{background:linear-gradient(135deg,#6d28d9,#7c3aed,#8b5cf6);color:#fff;box-shadow:0 4px 20px rgba(109,40,217,.35)}
 .bp:hover{transform:translateY(-2px)}
@@ -115,7 +125,7 @@ h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#fff,#c4b5
 <div class="hd">
 <div class="lg"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
 <h1>Video2MP3 Pro</h1>
-<p class="sub">Professional Video to Audio Converter</p>
+<p class="sub">Convert videos from any platform to audio</p>
 <div class="bdg"><span class="hf">🤗 Hugging Face</span><span>⚡ FFmpeg</span><span>🎧 Lossless</span><span>🔒 Private</span></div>
 </div>
 <div class="tbs">
@@ -165,7 +175,25 @@ h1{font-size:2.2rem;font-weight:900;background:linear-gradient(135deg,#fff,#c4b5
 <div id="panel2" class="vis">
 <div class="cd">
 <div class="uw"><svg class="uic" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><input type="text" class="ui2" id="urlInput" placeholder="Paste video URL here..."></div>
-<p class="uh">Supports <em>YouTube</em>, <em>Vimeo</em>, <em>TikTok</em> and 1000+ sites</p>
+
+<div class="sl" style="margin-top:14px"><span class="dt"></span> SUPPORTED PLATFORMS</div>
+<div class="plats">
+<span class="plat" onclick="setUrl('youtube.com/')"><span class="pi">▶️</span> YouTube</span>
+<span class="plat" onclick="setUrl('instagram.com/')"><span class="pi">📸</span> Instagram</span>
+<span class="plat" onclick="setUrl('tiktok.com/')"><span class="pi">🎵</span> TikTok</span>
+<span class="plat" onclick="setUrl('facebook.com/')"><span class="pi">👤</span> Facebook</span>
+<span class="plat" onclick="setUrl('twitter.com/')"><span class="pi">🐦</span> Twitter/X</span>
+<span class="plat" onclick="setUrl('vimeo.com/')"><span class="pi">🎬</span> Vimeo</span>
+<span class="plat" onclick="setUrl('soundcloud.com/')"><span class="pi">🔊</span> SoundCloud</span>
+<span class="plat" onclick="setUrl('reddit.com/')"><span class="pi">🤖</span> Reddit</span>
+<span class="plat" onclick="setUrl('twitch.tv/')"><span class="pi">💜</span> Twitch</span>
+<span class="plat" onclick="setUrl('dailymotion.com/')"><span class="pi">📹</span> Dailymotion</span>
+<span class="plat" onclick="setUrl('pinterest.com/')"><span class="pi">📌</span> Pinterest</span>
+<span class="plat" onclick="setUrl('spotify.com/')"><span class="pi">🟢</span> Spotify</span>
+</div>
+
+<div class="uh">Click a platform to open it, then paste the video URL back here. Supports <em>1000+</em> sites via yt-dlp.</div>
+
 <div class="fs">
 <div class="sl"><span class="dt"></span> FORMAT</div>
 <div class="fg" id="ufg2">
@@ -222,6 +250,11 @@ function switchTab(n) {
   tabs[n-1].classList.add('on');
   panels[n-1].classList.remove('vis');
   if (n === 3) loadHistory();
+}
+
+/* Platform quick link - open in new tab */
+function setUrl(platform) {
+  window.open('https://www.' + platform, '_blank');
 }
 
 /* Format pick */
@@ -334,6 +367,7 @@ function doUpload() {
 function doUrl() {
   var url = document.getElementById('urlInput').value.trim();
   if (!url) { showSt('Paste a URL', 'err'); return; }
+  if (!url.startsWith('http')) url = 'https://' + url;
   resetAll();
   var btn = document.getElementById('urlBtn');
   btn.disabled = true;
