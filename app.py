@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-import os, uuid, subprocess, json, threading, ssl, urllib.request
+import os, uuid, subprocess, json, threading
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 
-# Fix SSL
 os.environ['CURL_CA_BUNDLE'] = ''
 os.environ['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
+os.environ['SSL_CERT_FILE'] = '/etc/ssl/certs/ca-certificates.crt'
+os.environ['PYTHONHTTPSVERIFY'] = '0'
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-app.config['CONVERTED_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'converted')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+app.config['CONVERTED_FOLDER'] = os.path.join(BASE_DIR, 'converted')
 app.secret_key = os.urandom(24)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['CONVERTED_FOLDER'], exist_ok=True)
@@ -54,8 +56,7 @@ def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', s
                 except: pass
         process.wait()
         if process.returncode == 0 and os.path.exists(output_path):
-            size = os.path.getsize(output_path)
-            conversions[task_id] = {'status':'completed','progress':100,'output_path':output_path,'file_size':size,'filename':os.path.basename(output_path)}
+            conversions[task_id] = {'status':'completed','progress':100,'output_path':output_path,'file_size':os.path.getsize(output_path),'filename':os.path.basename(output_path)}
         else:
             conversions[task_id] = {'status':'error','message':'Conversion failed'}
     except Exception as e:
@@ -68,7 +69,6 @@ def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', s
 def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
     try:
         conversions[task_id] = {'status':'downloading','progress':0}
-        
         output_base = output_path.rsplit('.',1)[0]
         
         cmd = [
@@ -85,11 +85,13 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
             '--legacy-server-connect',
             '--no-warnings',
             '--progress',
-            '--extractor-retries', '3',
-            '--retries', '3',
-            '--fragment-retries', '3',
+            '--extractor-retries', '5',
+            '--retries', '5',
+            '--fragment-retries', '5',
             '--socket-timeout', '30',
-            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            '--referer', 'https://www.youtube.com/',
+            '--add-header', 'Accept-Language:en-US,en;q=0.9',
             url
         ]
         
@@ -101,13 +103,7 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
         my_env['SSL_CERT_FILE'] = '/etc/ssl/certs/ca-certificates.crt'
         my_env['PYTHONHTTPSVERIFY'] = '0'
         
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            env=my_env
-        )
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, env=my_env)
         
         all_output = []
         for line in process.stdout:
@@ -131,11 +127,10 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
                 conversions[task_id]['progress'] = 95
                 
         process.wait()
-        
-        print(f"[yt-dlp] Exit code: {process.returncode}", flush=True)
+        print(f"[yt-dlp] Exit: {process.returncode}", flush=True)
         
         actual = None
-        for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv','.webm']:
+        for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv']:
             test_path = output_base + ext
             if os.path.exists(test_path):
                 actual = test_path
@@ -143,28 +138,22 @@ def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
         
         if process.returncode == 0 and actual and os.path.exists(actual):
             size = os.path.getsize(actual)
-            fname = os.path.basename(actual)
-            conversions[task_id] = {
-                'status':'completed',
-                'progress':100,
-                'output_path':actual,
-                'file_size':size,
-                'filename':fname
-            }
-            print(f"[yt-dlp] Success: {fname} ({size} bytes)", flush=True)
+            conversions[task_id] = {'status':'completed','progress':100,'output_path':actual,'file_size':size,'filename':os.path.basename(actual)}
+            print(f"[yt-dlp] OK: {os.path.basename(actual)} ({size} bytes)", flush=True)
         else:
-            error_msg = 'Download failed. '
+            err = 'Download failed. '
             for line in reversed(all_output[-20:]):
-                if 'error' in line.lower() or 'ssl' in line.lower():
-                    error_msg = line[:150]
+                low = line.lower()
+                if 'error' in low or 'ssl' in low or 'unable' in low or 'blocked' in low:
+                    err = line[:200]
                     break
-            conversions[task_id] = {'status':'error','message':error_msg}
+            conversions[task_id] = {'status':'error','message':err}
             print(f"[yt-dlp] FAILED", flush=True)
             for line in all_output[-15:]:
                 print(f"  {line}", flush=True)
                 
     except Exception as e:
-        print(f"[yt-dlp] Exception: {str(e)}", flush=True)
+        print(f"[yt-dlp] Exception: {e}", flush=True)
         conversions[task_id] = {'status':'error','message':str(e)}
 
 @app.route('/')
@@ -184,8 +173,7 @@ def upload_file():
     filename = secure_filename(file.filename)
     input_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{task_id}_{filename}')
     file.save(input_path)
-    output_name = f'{task_id}_{os.path.splitext(filename)[0]}.{fmt}'
-    output_path = os.path.join(app.config['CONVERTED_FOLDER'], output_name)
+    output_path = os.path.join(app.config['CONVERTED_FOLDER'], f'{task_id}_{os.path.splitext(filename)[0]}.{fmt}')
     thread = threading.Thread(target=convert_video, args=(input_path,output_path,task_id,bitrate,fmt,sample_rate,bit_depth))
     thread.daemon = True; thread.start()
     return jsonify({'task_id':task_id,'message':'Converting'})
@@ -194,9 +182,8 @@ def upload_file():
 def convert_url():
     data = request.get_json()
     url = data.get('url','').strip()
-    if not url: return jsonify({'error':'No URL provided'}),400
-    if not url.startswith('http'):
-        url = 'https://' + url
+    if not url: return jsonify({'error':'No URL'}),400
+    if not url.startswith('http'): url = 'https://' + url
     bitrate = data.get('bitrate','320k')
     fmt = data.get('format','mp3')
     task_id = str(uuid.uuid4())[:8]
@@ -219,8 +206,7 @@ def download_file(task_id):
     fname = task.get('filename', os.path.basename(path))
     if '_' in fname:
         parts = fname.split('_')
-        if len(parts) > 1:
-            fname = '_'.join(parts[1:])
+        if len(parts) > 1: fname = '_'.join(parts[1:])
     return send_file(path, as_attachment=True, download_name=fname)
 
 @app.route('/history')
@@ -253,18 +239,18 @@ def cleanup():
     return jsonify({'cleaned':cleaned})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 7860))
+    port = int(os.environ.get('PORT', 10000))
     print("="*50)
-    print("  Video2MP3 Pro")
+    print("  Video2MP3 Pro - Render")
     print(f"  Port: {port}")
     print("="*50)
     try:
         r = subprocess.run(['yt-dlp','--version'], capture_output=True, text=True)
         print(f"  yt-dlp: {r.stdout.strip()}", flush=True)
-    except: print("  WARNING: yt-dlp not found!", flush=True)
+    except: print("  yt-dlp: NOT FOUND", flush=True)
     try:
         r = subprocess.run(['ffmpeg','-version'], capture_output=True, text=True)
         print(f"  ffmpeg: OK", flush=True)
-    except: print("  WARNING: ffmpeg not found!", flush=True)
+    except: print("  ffmpeg: NOT FOUND", flush=True)
     print("="*50)
     app.run(host='0.0.0.0', port=port, debug=False)

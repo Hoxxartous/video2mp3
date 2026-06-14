@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: video2mp3
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: PORT
+        value: "10000"
+    plan: free
