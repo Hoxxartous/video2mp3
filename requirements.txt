@@ -1,9 +1,4 @@
-Flask==3.0.0
-Werkzeug==3.0.1
-gunicorn
+Flask==3.0.3
+Werkzeug==3.0.3
+yt-dlp
 requests
-certifi
-urllib3
-pytubefix
-beautifulsoup4
-lxml
