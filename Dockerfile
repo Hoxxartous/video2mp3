@@ -1,7 +1,12 @@
 FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
-    ffmpeg ca-certificates curl gnupg lsb-release sudo \
+    ffmpeg \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    dbus \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg \
@@ -9,6 +14,8 @@ RUN curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg | gpg --yes --dearmor
     && apt-get update \
     && apt-get install -y cloudflare-warp \
     && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /run/dbus
 
 WORKDIR /app
 RUN mkdir -p uploads converted templates
