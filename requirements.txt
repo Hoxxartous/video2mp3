@@ -4,3 +4,6 @@ gunicorn
 requests
 certifi
 urllib3
+pytubefix
+beautifulsoup4
+lxml
