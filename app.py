@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import os, uuid, subprocess, json, threading
+import os, uuid, subprocess, json, threading, re, time
+import requests as req
 from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 
@@ -31,7 +32,8 @@ def get_duration(filepath):
     except: pass
     return 0
 
-def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', sample_rate='44100', bit_depth='16'):
+def convert_audio(input_path, output_path, task_id, bitrate='320k', fmt='mp3', sample_rate='44100'):
+    """Convert any audio/video file to target format using ffmpeg."""
     try:
         conversions[task_id] = {'status':'converting','progress':0}
         duration = get_duration(input_path)
@@ -66,94 +68,376 @@ def convert_video(input_path, output_path, task_id, bitrate='320k', fmt='mp3', s
             if os.path.exists(input_path): os.remove(input_path)
         except: pass
 
-def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
+def download_file(url, save_path, task_id):
+    """Download a file with progress tracking."""
     try:
-        conversions[task_id] = {'status':'downloading','progress':0}
-        output_base = output_path.rsplit('.',1)[0]
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+        }
+        r = req.get(url, headers=headers, stream=True, timeout=120, verify=False)
+        total = int(r.headers.get('content-length', 0))
+        downloaded = 0
+        with open(save_path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024*64):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        pct = min(int((downloaded / total) * 95), 95)
+                        conversions[task_id]['progress'] = pct
         
-        cmd = [
-            'yt-dlp',
-            '-x',
-            '--audio-format', fmt,
-            '--audio-quality', '0',
-            '-o', output_base + '.%(ext)s',
-            '--no-playlist',
-            '--newline',
-            '--no-check-certificates',
-            '--geo-bypass',
-            '--force-ipv4',
-            '--legacy-server-connect',
-            '--no-warnings',
-            '--progress',
-            '--extractor-retries', '5',
-            '--retries', '5',
-            '--fragment-retries', '5',
-            '--socket-timeout', '30',
-            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            '--referer', 'https://www.youtube.com/',
-            '--add-header', 'Accept-Language:en-US,en;q=0.9',
-            url
+        if os.path.exists(save_path) and os.path.getsize(save_path) > 0:
+            print(f"[download] OK: {os.path.getsize(save_path)} bytes", flush=True)
+            return True
+        return False
+    except Exception as e:
+        print(f"[download] Error: {e}", flush=True)
+        return False
+
+def get_cobalt_url(video_url, audio_only=True):
+    """Use Cobalt API to get direct download URL."""
+    try:
+        cobalt_urls = [
+            'https://api.cobalt.tools/',
+            'https://cobalt-api.hyper.lol/',
+            'https://api.cobalt.best/',
         ]
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'User-Agent': 'Video2MP3/1.0',
+        }
+        body = {
+            'url': video_url,
+            'downloadMode': 'audio' if audio_only else 'auto',
+            'audioFormat': 'mp3',
+        }
         
-        print(f"[yt-dlp] Starting: {url}", flush=True)
-        
-        my_env = os.environ.copy()
-        my_env['CURL_CA_BUNDLE'] = ''
-        my_env['REQUESTS_CA_BUNDLE'] = '/etc/ssl/certs/ca-certificates.crt'
-        my_env['SSL_CERT_FILE'] = '/etc/ssl/certs/ca-certificates.crt'
-        my_env['PYTHONHTTPSVERIFY'] = '0'
-        
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, env=my_env)
-        
-        all_output = []
-        for line in process.stdout:
-            line = line.strip()
-            all_output.append(line)
-            print(f"[yt-dlp] {line}", flush=True)
-            
-            if '[download]' in line and '%' in line:
-                try:
-                    parts = line.split()
-                    for part in parts:
-                        if '%' in part:
-                            pct = float(part.replace('%',''))
-                            conversions[task_id]['progress'] = min(int(pct),99)
-                            conversions[task_id]['status'] = 'downloading'
-                            break
-                except: pass
-            
-            if 'ExtractAudio' in line or 'Extracting' in line:
-                conversions[task_id]['status'] = 'converting'
-                conversions[task_id]['progress'] = 95
+        for cobalt_url in cobalt_urls:
+            try:
+                print(f"[cobalt] Trying: {cobalt_url}", flush=True)
+                r = req.post(cobalt_url, json=body, headers=headers, timeout=30, verify=False)
+                print(f"[cobalt] Status: {r.status_code}", flush=True)
+                print(f"[cobalt] Response: {r.text[:500]}", flush=True)
                 
-        process.wait()
-        print(f"[yt-dlp] Exit: {process.returncode}", flush=True)
-        
-        actual = None
-        for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv']:
-            test_path = output_base + ext
-            if os.path.exists(test_path):
-                actual = test_path
+                if r.status_code == 200:
+                    data = r.json()
+                    # Cobalt returns either 'url' or 'streamUrl' or 'urls'
+                    download_url = data.get('url') or data.get('streamUrl')
+                    if not download_url and 'urls' in data and data['urls']:
+                        download_url = data['urls'][0] if isinstance(data['urls'], list) else data['urls']
+                    if download_url:
+                        print(f"[cobalt] Got URL: {download_url[:100]}...", flush=True)
+                        return download_url
+            except Exception as e:
+                print(f"[cobalt] Failed: {e}", flush=True)
+                continue
+        return None
+    except Exception as e:
+        print(f"[cobalt] Error: {e}", flush=True)
+        return None
+
+def get_youtube_native_url(video_url):
+    """Try to get YouTube direct URL using Invidious instances."""
+    try:
+        # Extract video ID
+        video_id = None
+        patterns = [
+            r'(?:v=|/v/|youtu\.be/)([a-zA-Z0-9_-]{11})',
+            r'(?:embed/)([a-zA-Z0-9_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, video_url)
+            if match:
+                video_id = match.group(1)
                 break
         
-        if process.returncode == 0 and actual and os.path.exists(actual):
-            size = os.path.getsize(actual)
-            conversions[task_id] = {'status':'completed','progress':100,'output_path':actual,'file_size':size,'filename':os.path.basename(actual)}
-            print(f"[yt-dlp] OK: {os.path.basename(actual)} ({size} bytes)", flush=True)
-        else:
-            err = 'Download failed. '
-            for line in reversed(all_output[-20:]):
-                low = line.lower()
-                if 'error' in low or 'ssl' in low or 'unable' in low or 'blocked' in low:
-                    err = line[:200]
-                    break
-            conversions[task_id] = {'status':'error','message':err}
-            print(f"[yt-dlp] FAILED", flush=True)
-            for line in all_output[-15:]:
-                print(f"  {line}", flush=True)
-                
+        if not video_id:
+            return None
+        
+        print(f"[invidious] Video ID: {video_id}", flush=True)
+        
+        # Try multiple Invidious instances
+        instances = [
+            f'https://vid.puffyan.us/api/v1/videos/{video_id}',
+            f'https://invidious.fdn.fr/api/v1/videos/{video_id}',
+            f'https://yt.artemislena.eu/api/v1/videos/{video_id}',
+            f'https://invidious.nerdvpn.de/api/v1/videos/{video_id}',
+            f'https://inv.nadeko.net/api/v1/videos/{video_id}',
+        ]
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+        }
+        
+        for instance_url in instances:
+            try:
+                print(f"[invidious] Trying: {instance_url}", flush=True)
+                r = req.get(instance_url, headers=headers, timeout=15, verify=False)
+                if r.status_code == 200:
+                    data = r.json()
+                    # Get adaptive formats (audio only is better quality)
+                    formats = data.get('adaptiveFormats', [])
+                    
+                    # Find best audio format
+                    best_audio = None
+                    for fmt in formats:
+                        if fmt.get('type','').startswith('audio/'):
+                            if best_audio is None or fmt.get('bitrate',0) > best_audio.get('bitrate',0):
+                                best_audio = fmt
+                    
+                    if best_audio and 'url' in best_audio:
+                        print(f"[invidious] Got audio URL: {best_audio['url'][:100]}...", flush=True)
+                        return best_audio['url']
+                    
+                    # Fallback: get format streams (has audio+video)
+                    fmts = data.get('formatStreams', [])
+                    if fmts:
+                        print(f"[invidious] Got stream URL: {fmts[-1]['url'][:100]}...", flush=True)
+                        return fmts[-1]['url']
+            except Exception as e:
+                print(f"[invidious] Failed: {e}", flush=True)
+                continue
+        return None
     except Exception as e:
-        print(f"[yt-dlp] Exception: {e}", flush=True)
+        print(f"[invidious] Error: {e}", flush=True)
+        return None
+
+def get_twitter_native_url(tweet_url):
+    """Try to get Twitter direct URL using alternative APIs."""
+    try:
+        apis = [
+            f'https://api.fxtwitter.com/status/{tweet_url.split("/")[-1].split("?")[0]}',
+        ]
+        
+        # Extract tweet ID
+        match = re.search(r'(?:status|statuses)/(\d+)', tweet_url)
+        if not match:
+            return None
+        tweet_id = match.group(1)
+        
+        print(f"[twitter] Tweet ID: {tweet_id}", flush=True)
+        
+        # Try fxtwitter/vxtwitter
+        fix_apis = [
+            f'https://api.fxtwitter.com/status/{tweet_id}',
+            f'https://api.vxtwitter.com/status/{tweet_id}',
+        ]
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+        }
+        
+        for api_url in fix_apis:
+            try:
+                print(f"[twitter] Trying: {api_url}", flush=True)
+                r = req.get(api_url, headers=headers, timeout=15, verify=False)
+                if r.status_code == 200:
+                    data = r.json()
+                    tweet = data.get('tweet', data)
+                    
+                    # Check for media
+                    media = tweet.get('media', {})
+                    videos = media.get('videos', [])
+                    
+                    if videos:
+                        best = videos[0]
+                        video_url = best.get('url')
+                        if video_url:
+                            print(f"[twitter] Got URL: {video_url[:100]}...", flush=True)
+                            return video_url
+            except Exception as e:
+                print(f"[twitter] Failed: {e}", flush=True)
+                continue
+        return None
+    except Exception as e:
+        print(f"[twitter] Error: {e}", flush=True)
+        return None
+
+def is_youtube(url):
+    return bool(re.search(r'(youtube\.com|youtu\.be)', url))
+
+def is_twitter(url):
+    return bool(re.search(r'(twitter\.com|x\.com)', url))
+
+def convert_url_to_audio(url, output_path, task_id, bitrate='320k', fmt='mp3'):
+    """Download and convert URL to audio using native methods for YouTube/Twitter."""
+    try:
+        conversions[task_id] = {'status':'downloading','progress':0}
+        
+        direct_url = None
+        method = ''
+        
+        # ============ YOUTUBE ============
+        if is_youtube(url):
+            print(f"[youtube] Processing: {url}", flush=True)
+            
+            # Method 1: Invidious (direct audio stream)
+            print("[youtube] Trying Invidious...", flush=True)
+            conversions[task_id]['status'] = 'downloading'
+            direct_url = get_youtube_native_url(url)
+            if direct_url:
+                method = 'invidious'
+            
+            # Method 2: Cobalt API
+            if not direct_url:
+                print("[youtube] Trying Cobalt API...", flush=True)
+                direct_url = get_cobalt_url(url, audio_only=True)
+                if direct_url:
+                    method = 'cobalt'
+            
+            # Method 3: yt-dlp with android_vr client (fallback)
+            if not direct_url:
+                print("[youtube] Trying yt-dlp fallback...", flush=True)
+                method = 'yt-dlp-youtube'
+                output_base = output_path.rsplit('.',1)[0]
+                cmd = [
+                    'yt-dlp','-x','--audio-format',fmt,'--audio-quality','0',
+                    '-o',output_base+'.%(ext)s','--no-playlist','--newline',
+                    '--no-check-certificates','--geo-bypass','--force-ipv4',
+                    '--legacy-server-connect','--extractor-retries','3','--retries','3',
+                    '--extractor-args','youtube:player_client=android_vr,mweb',
+                    '--user-agent','com.google.android.apps.youtube.vr.oculus/1.56.21 (Linux; U; Android 12; en_US)',
+                    url
+                ]
+                my_env = os.environ.copy()
+                my_env['CURL_CA_BUNDLE'] = ''
+                my_env['PYTHONHTTPSVERIFY'] = '0'
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, env=my_env)
+                for line in process.stdout:
+                    print(f"[yt-dlp] {line.strip()}", flush=True)
+                    if '[download]' in line and '%' in line:
+                        try:
+                            for p in line.split():
+                                if '%' in p:
+                                    conversions[task_id]['progress'] = min(int(float(p.replace('%',''))),99)
+                                    break
+                        except: pass
+                process.wait()
+                for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv']:
+                    test = output_base+ext
+                    if os.path.exists(test):
+                        conversions[task_id] = {'status':'completed','progress':100,'output_path':test,'file_size':os.path.getsize(test),'filename':os.path.basename(test)}
+                        print(f"[yt-dlp] OK: {test}", flush=True)
+                        return
+                conversions[task_id] = {'status':'error','message':'YouTube blocked this video from server. Try uploading the video file instead.'}
+                return
+        
+        # ============ TWITTER / X ============
+        elif is_twitter(url):
+            print(f"[twitter] Processing: {url}", flush=True)
+            
+            # Method 1: fxtwitter/vxtwitter
+            print("[twitter] Trying fxtwitter...", flush=True)
+            direct_url = get_twitter_native_url(url)
+            if direct_url:
+                method = 'fxtwitter'
+            
+            # Method 2: Cobalt API
+            if not direct_url:
+                print("[twitter] Trying Cobalt API...", flush=True)
+                direct_url = get_cobalt_url(url, audio_only=False)
+                if direct_url:
+                    method = 'cobalt'
+            
+            # Method 3: yt-dlp fallback
+            if not direct_url:
+                print("[twitter] Trying yt-dlp...", flush=True)
+                method = 'yt-dlp-twitter'
+                output_base = output_path.rsplit('.',1)[0]
+                cmd = [
+                    'yt-dlp','-x','--audio-format',fmt,'--audio-quality','0',
+                    '-o',output_base+'.%(ext)s','--no-playlist','--newline',
+                    '--no-check-certificates','--geo-bypass','--force-ipv4',
+                    '--retries','3','--user-agent',
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0',
+                    url
+                ]
+                my_env = os.environ.copy()
+                my_env['CURL_CA_BUNDLE'] = ''
+                my_env['PYTHONHTTPSVERIFY'] = '0'
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, env=my_env)
+                for line in process.stdout:
+                    print(f"[yt-dlp] {line.strip()}", flush=True)
+                process.wait()
+                for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv']:
+                    test = output_base+ext
+                    if os.path.exists(test):
+                        conversions[task_id] = {'status':'completed','progress':100,'output_path':test,'file_size':os.path.getsize(test),'filename':os.path.basename(test)}
+                        return
+                conversions[task_id] = {'status':'error','message':'Twitter/X download failed. Try uploading the video file instead.'}
+                return
+        
+        # ============ OTHER PLATFORMS (TikTok, Instagram, Vimeo, etc.) ============
+        else:
+            print(f"[other] Processing: {url}", flush=True)
+            
+            # Method 1: Cobalt API
+            direct_url = get_cobalt_url(url, audio_only=True)
+            if direct_url:
+                method = 'cobalt'
+            
+            # Method 2: yt-dlp
+            if not direct_url:
+                print("[other] Trying yt-dlp...", flush=True)
+                method = 'yt-dlp'
+                output_base = output_path.rsplit('.',1)[0]
+                cmd = [
+                    'yt-dlp','-x','--audio-format',fmt,'--audio-quality','0',
+                    '-o',output_base+'.%(ext)s','--no-playlist','--newline',
+                    '--no-check-certificates','--geo-bypass','--force-ipv4',
+                    '--legacy-server-connect','--retries','3',
+                    '--user-agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0',
+                    url
+                ]
+                my_env = os.environ.copy()
+                my_env['CURL_CA_BUNDLE'] = ''
+                my_env['PYTHONHTTPSVERIFY'] = '0'
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, env=my_env)
+                for line in process.stdout:
+                    print(f"[yt-dlp] {line.strip()}", flush=True)
+                    if '[download]' in line and '%' in line:
+                        try:
+                            for p in line.split():
+                                if '%' in p:
+                                    conversions[task_id]['progress'] = min(int(float(p.replace('%',''))),99)
+                                    break
+                        except: pass
+                process.wait()
+                for ext in ['.mp3','.m4a','.opus','.ogg','.flac','.wav','.webm','.aac','.mp4','.mkv']:
+                    test = output_base+ext
+                    if os.path.exists(test):
+                        conversions[task_id] = {'status':'completed','progress':100,'output_path':test,'file_size':os.path.getsize(test),'filename':os.path.basename(test)}
+                        return
+                conversions[task_id] = {'status':'error','message':'Download failed. Check the URL.'}
+                return
+        
+        # ============ DOWNLOAD DIRECT URL ============
+        if direct_url:
+            print(f"[{method}] Downloading from direct URL...", flush=True)
+            conversions[task_id]['status'] = 'downloading'
+            
+            # Determine temp extension
+            temp_ext = '.mp4'
+            if method == 'invidious':
+                temp_ext = '.webm'  # Invidious usually gives webm
+            temp_path = output_path.rsplit('.',1)[0] + '_temp' + temp_ext
+            
+            if download_file(direct_url, temp_path, task_id):
+                print(f"[{method}] Downloaded. Converting to {fmt}...", flush=True)
+                conversions[task_id]['status'] = 'converting'
+                conversions[task_id]['progress'] = 95
+                convert_audio(temp_path, output_path, task_id, bitrate, fmt)
+            else:
+                conversions[task_id] = {'status':'error','message':f'Download failed via {method}. Try uploading the video file directly.'}
+        else:
+            conversions[task_id] = {'status':'error','message':'Could not get download URL. Try uploading the video file directly.'}
+            
+    except Exception as e:
+        print(f"[error] {e}", flush=True)
         conversions[task_id] = {'status':'error','message':str(e)}
 
 @app.route('/')
@@ -174,7 +458,7 @@ def upload_file():
     input_path = os.path.join(app.config['UPLOAD_FOLDER'], f'{task_id}_{filename}')
     file.save(input_path)
     output_path = os.path.join(app.config['CONVERTED_FOLDER'], f'{task_id}_{os.path.splitext(filename)[0]}.{fmt}')
-    thread = threading.Thread(target=convert_video, args=(input_path,output_path,task_id,bitrate,fmt,sample_rate,bit_depth))
+    thread = threading.Thread(target=convert_audio, args=(input_path,output_path,task_id,bitrate,fmt,sample_rate))
     thread.daemon = True; thread.start()
     return jsonify({'task_id':task_id,'message':'Converting'})
 
@@ -198,7 +482,7 @@ def get_progress(task_id):
     return jsonify(conversions[task_id])
 
 @app.route('/download/<task_id>')
-def download_file(task_id):
+def download_file_route(task_id):
     if task_id not in conversions: return jsonify({'error':'Not found'}),404
     task = conversions[task_id]
     if task['status'] != 'completed': return jsonify({'error':'Not ready'}),400
@@ -241,7 +525,7 @@ def cleanup():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     print("="*50)
-    print("  Video2MP3 Pro - Render")
+    print("  Video2MP3 Pro")
     print(f"  Port: {port}")
     print("="*50)
     try:
@@ -249,8 +533,11 @@ if __name__ == '__main__':
         print(f"  yt-dlp: {r.stdout.strip()}", flush=True)
     except: print("  yt-dlp: NOT FOUND", flush=True)
     try:
-        r = subprocess.run(['ffmpeg','-version'], capture_output=True, text=True)
-        print(f"  ffmpeg: OK", flush=True)
+        subprocess.run(['ffmpeg','-version'], capture_output=True)
+        print("  ffmpeg: OK", flush=True)
     except: print("  ffmpeg: NOT FOUND", flush=True)
+    print("  cobalt API: Enabled", flush=True)
+    print("  invidious API: Enabled", flush=True)
+    print("  fxtwitter API: Enabled", flush=True)
     print("="*50)
     app.run(host='0.0.0.0', port=port, debug=False)
